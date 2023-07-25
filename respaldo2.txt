@@ -1,0 +1,508 @@
+App.js:
+
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './Auth';
+import { Admin, Resource } from 'react-admin';
+import IdentificacionForm from './components/IdentificacionForm';
+import PlacaForm from './components/PlacaForm';
+import ChasisForm from './components/ChasisForm';
+import PropiedadForm from './components/PropiedadForm';
+import ClientesForm from './components/ClientesForm';
+import VehiculosForm from './components/VehiculosForm';
+import SignUp from './SignUp';
+import SignIn from './SignIn';
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Navigate to="/datos/identificacionForm" />} />
+          <Route path="/" element={<Navigate to="/datos/VehiculosForm" />} />
+          <Route path="/datos/placaForm" element={<PlacaForm />} />
+          <Route path="/datos/chasisForm" element={<ChasisForm />} />
+          <Route path="/datos/propiedadForm" element={<PropiedadForm />} />
+          <Route path="/datos/clientes" element={<ClientesForm />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/signin" element={<SignIn />} />
+          {/* Use the ProtectedRoute component for routes under /datos */}
+          <Route path="/datos/*" element={<ProtectedRoute />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+}
+
+const ProtectedRoute = () => {
+  const { currentUser } = useAuth();
+
+  return currentUser ? <AdminPanel /> : <Navigate to="/signin" />;
+};
+
+const AdminPanel = () => {
+  return (
+    <Admin>
+      {/* Add the /datos prefix to all routes */}
+      <Resource name="identificacionForm" options={{ label: 'Buscar por Identificación' }} list={IdentificacionForm} />
+      <Resource name="vehiculosForm" options={{ label: 'Buscar Vehiculos' }} list={VehiculosForm} />
+      <Resource name="datos/placaForm" options={{ label: 'Buscar por Placa' }} list={PlacaForm} />
+      <Resource name="datos/chasisForm" options={{ label: 'Buscar por Chasis' }} list={ChasisForm} />
+      <Resource name="datos/propiedadForm" options={{ label: 'Buscar por Propiedad' }} list={PropiedadForm} />
+      <Resource name="datos/clientes" options={{ label: 'Consulta Clientes' }} list={ClientesForm} />
+    </Admin>
+  );
+}
+
+export default App;
+
+
+index.js:
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+
+const root = createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+reportWebVitals();
+
+IdentificacionForm.js:
+
+import React, { useState } from 'react';
+import axios from 'axios';
+import { Button, TextField, Container, Grid } from '@mui/material';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
+
+const IdentificacionForm = () => {
+  const [identificacion, setIdentificacion] = useState('');
+  const [rows, setRows] = useState([]);
+  const [validInput, setValidInput] = useState(false);
+
+  const columns = [
+    { field: 'datos', headerName: 'Datos', width: 300 },
+    { field: 'descripcion', headerName: 'Descripción', width: 300 },
+  ];
+
+  const fieldsOrder = [
+    'cedula', 'nombre', 'profesion', 'fechaExpedicion', 'fechaExpiracion',
+    'condicionCiudadano', 'fechaNacimiento', 'lugarNacimiento', 'conyuge',
+    'estadoCivil', 'fechaInscripcionDefuncion', 'actaDefuncion', 'fechaDefuncion'
+  ];
+
+  const fieldsMap = {
+    'cedula': 'Cédula',
+    'nombre': 'Nombres Completos',
+    'profesion': 'Profesión',
+    'fechaExpedicion': 'Fecha Expedición de Cédula',
+    'fechaExpiracion': 'Fecha Expiración de Cédula',
+    'condicionCiudadano': 'Condición Ciudadano',
+    'fechaNacimiento': 'Fecha Nacimiento',
+    'lugarNacimiento': 'Lugar Nacimiento',
+    'conyuge': 'Cónyugue',
+    'estadoCivil': 'Estado Civil',
+    'fechaInscripcionDefuncion': 'Fecha Inscripción Defunción',
+    'actaDefuncion': 'Acta de Defunción',
+    'fechaDefuncion': 'Fecha Defunción',
+  };
+
+  const isValidCedula = (cedula) => {
+    const coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2];
+    let total = 0;
+
+    if (cedula.length !== 10) {
+      return false;
+    }
+
+    for (let i = 0; i < coeficientes.length; i++) {
+      let valor = coeficientes[i] * parseInt(cedula[i]);
+      if (valor >= 10) {
+        valor = valor - 9;
+      }
+      total += valor;
+    }
+
+    total = total % 10 === 0 ? 0 : 10 - (total % 10);
+
+    return total === parseInt(cedula[9]);
+  };
+
+  const handleChange = (e) => {
+    setIdentificacion(e.target.value);
+    setValidInput(isValidCedula(e.target.value));
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && validInput) {
+      handleSearch();
+    }
+  };
+
+  const handleSearch = async () => {
+    try {
+      if (validInput) {
+        const response = await axios.get('http://192.168.10.89:3001/consultar', {
+          params: { identificacion },
+        });
+
+        if (Object.keys(response.data).length === 0) {
+          setRows([]);
+        } else {
+          const data = response.data.paquete.entidades.entidad[0].filas.fila[0].columnas.columna;
+          const dataMap = data.reduce((acc, item) => ({
+            ...acc,
+            [item.campo]: item.valor,
+          }), {});
+
+          const formattedData = fieldsOrder.map((field, i) => ({
+            id: i,
+            datos: fieldsMap[field],
+            descripcion: dataMap[field],
+          }));
+
+          setRows(formattedData);
+        }
+      } else {
+        console.error('La identificación no es válida');
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return (
+    <Container maxWidth="lg" style={{ height: 900, marginTop: '2em' }}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={6} md={4}>
+          <TextField
+            label="Identificación"
+            variant="outlined"
+            value={identificacion}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            fullWidth
+          />
+        </Grid>
+        <Grid item>
+          <Button variant="contained" color="primary" onClick={handleSearch} disabled={!validInput}>
+            Buscar
+          </Button>
+        </Grid>
+      </Grid>
+      <div style={{ height: 600, width: '100%', marginTop: '2em' }}>
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          pageSize={6}
+          components={{
+            Toolbar: GridToolbar,
+          }}
+          density="compact"
+        />
+      </div>
+    </Container>
+  );
+};
+
+export default IdentificacionForm;
+
+
+PrivateRoute.js:
+
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from './Auth';
+
+const PrivateRoute = ({ children }) => {
+    const auth = useAuth();
+    let location = useLocation();
+
+    return (
+        auth.user
+            ? children
+            : <Navigate to="/signin" state={{ from: location }} replace />
+    );
+}
+
+export default PrivateRoute;
+
+
+firebase.js:
+
+import { initializeApp } from "firebase/app";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDiwwodBo-JLvlVmzP_m4N6fTu1zLjYhRQ",
+    authDomain: "dinardap-c027c.firebaseapp.com",
+    projectId: "dinardap-c027c",
+    storageBucket: "dinardap-c027c.appspot.com",
+    messagingSenderId: "694608177224",
+    appId: "1:694608177224:web:237a5031433c1eb561107d",
+    measurementId: "G-51ML6VPQLF"
+};
+
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+
+export const doSignInWithEmailAndPassword = async (email, password) => {
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        console.error(error);
+    }
+};
+
+export const doCreateUserWithEmailAndPassword = async (email, password) => {
+    try {
+        await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        console.error(error);
+    }
+};
+
+
+SignUp.js:
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { doCreateUserWithEmailAndPassword } from './firebase';  // Importa desde firebase.js
+
+function SignUp() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const navigate = useNavigate();
+
+    const onChangeHandler = event => {
+        const { name, value } = event.currentTarget;
+
+        if (name === 'userEmail') {
+            setEmail(value);
+        } else if (name === 'userPassword') {
+            setPassword(value);
+        }
+    };
+
+    const signUp = event => {
+        event.preventDefault();
+        doCreateUserWithEmailAndPassword(email, password)
+            .then(() => {
+                navigate('/');
+            })
+            .catch(error => {
+                // handle error
+            });
+    };
+
+    return (
+        <div>
+            <h1>Sign Up</h1>
+            <form>
+                <label htmlFor="userEmail">Email:</label>
+                <input
+                    type="email"
+                    name="userEmail"
+                    value={email}
+                    id="userEmail"
+                    onChange={onChangeHandler}
+                    autoComplete="email"
+                />
+                <label htmlFor="userPassword">Password:</label>
+                <input
+                    type="password"
+                    name="userPassword"
+                    value={password}
+                    id="userPassword"
+                    onChange={onChangeHandler}
+                    autoComplete="new-password"
+                />
+                <button onClick={signUp}>Sign up</button>
+            </form>
+        </div>
+    );
+}
+
+export default SignUp;
+
+SignIn.js:
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { doSignInWithEmailAndPassword } from './firebase';  // Importa desde firebase.js
+
+function SignIn() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const navigate = useNavigate();
+
+    const onChangeHandler = event => {
+        const { name, value } = event.currentTarget;
+
+        if (name === 'userEmail') {
+            setEmail(value);
+        } else if (name === 'userPassword') {
+            setPassword(value);
+        }
+    };
+
+    const signIn = event => {
+        event.preventDefault();
+        doSignInWithEmailAndPassword(email, password)
+            .then(() => {
+                navigate('/');
+            })
+            .catch(error => {
+                // handle error
+            });
+    };
+
+    return (
+        <div>
+            <h1>Sign In</h1>
+            <form>
+                <label htmlFor="userEmail">Email:</label>
+                <input
+                    type="email"
+                    name="userEmail"
+                    value={email}
+                    id="userEmail"
+                    onChange={onChangeHandler}
+                    autoComplete="email"
+                />
+                <label htmlFor="userPassword">Password:</label>
+                <input
+                    type="password"
+                    name="userPassword"
+                    value={password}
+                    id="userPassword"
+                    onChange={onChangeHandler}
+                    autoComplete="current-password"
+                />
+                <button onClick={signIn}>Sign in</button>
+            </form>
+        </div>
+    );
+}
+
+export default SignIn;
+
+
+Auth.js:
+
+import { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebase'; // Importa auth desde firebase.js
+
+export const AuthContext = createContext();
+
+export function AuthProvider({ children }) {
+    const [currentUser, setCurrentUser] = useState(null);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, user => {
+            setCurrentUser(user);
+        });
+
+        return unsubscribe;
+    }, []);
+
+    const value = {
+        currentUser,
+        signInWithEmailAndPassword: auth.doSignInWithEmailAndPassword,
+        createUserWithEmailAndPassword: auth.doCreateUserWithEmailAndPassword
+    };
+
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
+}
+
+export function useAuth() {
+    return useContext(AuthContext);
+}
+
+
+package.json:
+{
+  "homepage": "/datos",
+  "name": "data",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@i2labs/dns": "^1.0.1",
+    "@mui/material": "^5.13.6",
+    "@mui/x-data-grid": "^6.9.0",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^0.27.2",
+    "browser-resolve": "^2.0.0",
+    "chrome-dgram": "^3.0.6",
+    "constants-browserify": "^1.0.0",
+    "crypto-browserify": "^3.12.0",
+    "dgram-browserify": "^0.0.13",
+    "dns.js": "^1.0.1",
+    "firebase": "^10.1.0",
+    "https-browserify": "^1.0.0",
+    "mssql": "^9.1.1",
+    "net-browserify": "^0.2.4",
+    "os-browserify": "^0.3.0",
+    "prop-types": "^15.8.1",
+    "ra-data-json-server": "^4.11.4",
+    "react": "^18.2.0",
+    "react-admin": "^4.11.4",
+    "react-dom": "^18.2.0",
+    "react-native-udp": "^4.1.7",
+    "react-router-dom": "^6.14.2",
+    "react-scripts": "5.0.1",
+    "recharts": "^2.7.2",
+    "soap": "^1.0.0",
+    "stream-browserify": "^3.0.0",
+    "timers-browserify": "^2.0.12",
+    "tls-browserify": "^0.2.2",
+    "url": "^0.11.1",
+    "util": "^0.12.5",
+    "web-vitals": "^2.1.4",
+    "xml2js": "^0.6.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "browserify-zlib": "^0.2.0",
+    "path-browserify": "^1.0.1",
+    "querystring-es3": "^0.2.1",
+    "stream-http": "^3.2.0"
+  }
+}

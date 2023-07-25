@@ -1,0 +1,756 @@
+App.js:
+
+import React from 'react';
+import { Admin, Resource } from 'react-admin';
+import IdentificacionForm from './components/IdentificacionForm';
+import PlacaForm from './components/PlacaForm';
+import ChasisForm from './components/ChasisForm';
+import PropiedadForm from './components/PropiedadForm';
+import ClientesForm from './components/ClientesForm';
+import VehiculosForm from './components/VehiculosForm';
+
+
+function App() {
+  return (
+    <Admin>
+      <Resource name="identificacionForm" options={{ label: 'Buscar por Identificación' }} list={IdentificacionForm} />
+      <Resource name="vehiculosForm" options={{ label: 'Buscar Vehiculos' }} list={VehiculosForm} />
+      <Resource name="placaForm" options={{ label: 'Buscar por Placa' }} list={PlacaForm} />
+      <Resource name="chasisForm" options={{ label: 'Buscar por Chasis' }} list={ChasisForm} />
+      <Resource name="propiedadForm" options={{ label: 'Buscar por Propiedad' }} list={PropiedadForm} />
+      <Resource name="clientes" options={{ label: 'Consulta Clientes' }} list={ClientesForm} />
+    </Admin>
+  );
+}
+
+export default App;
+
+index.js:
+
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+
+const root = createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+reportWebVitals();
+
+IdentificacionForm.js:
+
+import React, { useState } from 'react';
+import axios from 'axios';
+import { Button, TextField, Container, Grid } from '@mui/material';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
+
+const IdentificacionForm = () => {
+  const [identificacion, setIdentificacion] = useState('');
+  const [rows, setRows] = useState([]);
+
+  const columns = [
+    { field: 'datos', headerName: 'Datos', width: 200 },
+    { field: 'descripcion', headerName: 'Descripción', width: 300 },
+  ];
+
+  const fieldsOrder = [
+    'cedula', 'nombre', 'profesion', 'fechaExpedicion', 'fechaExpiracion',
+    'condicionCiudadano', 'fechaNacimiento', 'lugarNacimiento', 'conyuge',
+    'estadoCivil', 'fechaInscripcionDefuncion', 'actaDefuncion', 'fechaDefuncion'
+  ];
+
+  const fieldsMap = {
+    'cedula': 'Cédula',
+    'nombre': 'Nombres Completos',
+    'profesion': 'Profesión',
+    'fechaExpedicion': 'Fecha Expedición de Cédula',
+    'fechaExpiracion': 'Fecha Expiración de Cédula',
+    'condicionCiudadano': 'Condición Ciudadano',
+    'fechaNacimiento': 'Fecha Nacimiento',
+    'lugarNacimiento': 'Lugar Nacimiento',
+    'conyuge': 'Cónyugue',
+    'estadoCivil': 'Estado Civil',
+    'fechaInscripcionDefuncion': 'Fecha Inscripción Defunción',
+    'actaDefuncion': 'Acta de Defunción',
+    'fechaDefuncion': 'Fecha Defunción',
+  };
+
+  const handleSearch = async () => {
+    try {
+      const response = await axios.get('http://192.168.10.89:3001/consultar', {
+        params: { identificacion },
+      });
+
+      if (Object.keys(response.data).length === 0) {
+        setRows([]);
+      } else {
+        const data = response.data.paquete.entidades.entidad[0].filas.fila[0].columnas.columna;
+        const dataMap = data.reduce((acc, item) => ({
+          ...acc,
+          [item.campo]: item.valor,
+        }), {});
+
+        const formattedData = fieldsOrder.map((field, i) => ({
+          id: i,
+          datos: fieldsMap[field],
+          descripcion: dataMap[field],
+        }));
+
+        setRows(formattedData);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return (
+    <Container maxWidth="lg" style={{ height: 900, marginTop: '2em' }}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={6} md={4}>
+          <TextField
+            label="Identificación"
+            variant="outlined"
+            value={identificacion}
+            onChange={(e) => setIdentificacion(e.target.value)}
+            fullWidth
+          />
+        </Grid>
+        <Grid item>
+          <Button variant="contained" color="primary" onClick={handleSearch}>
+            Buscar
+          </Button>
+        </Grid>
+      </Grid>
+      <div style={{ height: 600, width: '100%', marginTop: '2em' }}>
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          pageSize={6}
+          components={{
+            Toolbar: GridToolbar,
+          }}
+          density="compact"
+        />
+      </div>
+    </Container>
+  );
+};
+
+export default IdentificacionForm;
+
+PlacaForm.js:
+
+import React, { useState } from 'react';
+import axios from 'axios';
+import { Button, TextField, Container, Grid } from '@mui/material';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
+
+const PlacaForm = () => {
+  const [placa, setPlaca] = useState('');
+  const [rows, setRows] = useState([]);
+
+  const columns = [
+    { field: 'datos', headerName: 'Datos', width: 200 },
+    { field: 'descripcion', headerName: 'Descripción', width: 300 },
+  ];
+
+  const fieldsOrder = ['chasis', 'estado', 'marca', 'modelo', 'placa'];
+
+  const fieldsMap = {
+    'chasis': 'Chasis',
+    'estado': 'Estado',
+    'marca': 'Marca',
+    'modelo': 'Modelo',
+    'placa': 'Placa',
+  };
+
+  const handleSearchByPlaca = async () => {
+    try {
+      const response = await axios.get('http://192.168.10.89:3001/consultarPorPlaca', {
+        params: { placa },
+      });
+
+      if (Object.keys(response.data).length === 0) {
+        setRows([]);
+      } else {
+        const data = response.data.paquete.entidades.entidad[0].filas.fila[0].columnas.columna;
+        const dataMap = data.reduce((acc, item) => ({
+          ...acc,
+          [item.campo]: item.valor,
+        }), {});
+
+        const formattedData = fieldsOrder.map((field, i) => ({
+          id: i,
+          datos: fieldsMap[field],
+          descripcion: dataMap[field],
+        }));
+
+        setRows(formattedData);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return (
+    <Container maxWidth="lg" style={{ height: 900, marginTop: '2em' }}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={6} md={4}>
+          <TextField
+            label="Placa"
+            variant="outlined"
+            value={placa}
+            onChange={(e) => setPlaca(e.target.value)}
+            fullWidth
+          />
+        </Grid>
+        <Grid item>
+          <Button variant="contained" color="primary" onClick={handleSearchByPlaca}>
+            Buscar
+          </Button>
+        </Grid>
+      </Grid>
+      <div style={{ height: 600, width: '100%', marginTop: '2em' }}>
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          pageSize={6}
+          components={{
+            Toolbar: GridToolbar,
+          }}
+          density="compact"
+        />
+      </div>
+    </Container>
+  );
+};
+
+export default PlacaForm;
+
+ChasisForm.js:
+
+import React, { useState } from 'react';
+import axios from 'axios';
+import { Button, TextField, Container, Grid } from '@mui/material';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
+
+const ChasisForm = () => {
+  const [chasis, setChasis] = useState('');
+  const [rows, setRows] = useState([]);
+
+  const columns = [
+    { field: 'datos', headerName: 'Datos', width: 200 },
+    { field: 'descripcion', headerName: 'Descripción', width: 300 },
+  ];
+
+  const fieldsOrder = ['chasis', 'estado', 'marca', 'modelo', 'placa'];
+
+  const fieldsMap = {
+    'chasis': 'Chasis',
+    'estado': 'Estado',
+    'marca': 'Marca',
+    'modelo': 'Modelo',
+    'placa': 'Placa',
+  };
+
+  const handleSearchByChasis = async () => {
+    try {
+      const response = await axios.get('http://192.168.10.89:3001/consultarPorChasis', {
+        params: { chasis },
+      });
+
+      if (Object.keys(response.data).length === 0) {
+        setRows([]);
+      } else {
+        const data = response.data.paquete.entidades.entidad[0].filas.fila[0].columnas.columna;
+        const dataMap = data.reduce((acc, item) => ({
+          ...acc,
+          [item.campo]: item.valor,
+        }), {});
+
+        const formattedData = fieldsOrder.map((field, i) => ({
+          id: i,
+          datos: fieldsMap[field],
+          descripcion: dataMap[field],
+        }));
+
+        setRows(formattedData);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return (
+    <Container maxWidth="lg" style={{ height: 900, marginTop: '2em' }}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={6} md={4}>
+          <TextField
+            label="Chasis"
+            variant="outlined"
+            value={chasis}
+            onChange={(e) => setChasis(e.target.value)}
+            fullWidth
+          />
+        </Grid>
+        <Grid item>
+          <Button variant="contained" color="primary" onClick={handleSearchByChasis}>
+            Buscar
+          </Button>
+        </Grid>
+      </Grid>
+      <div style={{ height: 600, width: '100%', marginTop: '2em' }}>
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          pageSize={6}
+          components={{
+            Toolbar: GridToolbar,
+          }}
+          density="compact"
+        />
+      </div>
+    </Container>
+  );
+};
+
+export default ChasisForm;
+
+PropiedadForm.js:
+
+import React, { useState } from 'react';
+import axios from 'axios';
+import { Button, TextField, Container, Grid, Accordion, AccordionSummary, AccordionDetails, Typography } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
+const PropiedadForm = () => {
+  const [identificacion, setIdentificacion] = useState('');
+  const [propiedades, setPropiedades] = useState([]);
+
+  const fieldsOrder = [
+    'nombres', 'apellidos', 'razonSocial', 'tipoContrato', 'contraparte', 'fechaInscripcion', 
+    'claveCastratal', 'parroquia', 'canton', 'cuantia', 'numeroJuicio', 'ubicacionDato'
+  ];
+
+  const fieldsMap = {
+    'nombres': 'Nombres',
+    'apellidos': 'Apellidos',
+    'razonSocial': 'Razón Social',
+    'tipoContrato': 'Tipo de Contrato',
+    'contraparte': 'Contraparte',
+    'fechaInscripcion': 'Fecha de Inscripción',
+    'claveCastratal': 'Clave Catastral',
+    'parroquia': 'Parroquia',
+    'canton': 'Cantón',
+    'cuantia': 'Cuantía',
+    'numeroJuicio': 'Número de Juicio',
+    'ubicacionDato': 'Ubicación del Dato'
+  };
+
+  const handleSearch = async () => {
+    try {
+      const response = await axios.get('http://192.168.10.89:3001/consultarPorIdentificacion', {
+        params: { identificacion },
+      });
+
+      if (Object.keys(response.data).length === 0) {
+        setPropiedades([]);
+      } else {
+        const entidades = response.data.paquete.entidades.entidad[0].filas.fila;
+        const formattedData = entidades.map((entidad) => {
+          const data = entidad.columnas.columna;
+          const dataMap = data.reduce((acc, item) => ({
+            ...acc,
+            [item.campo]: item.valor,
+          }), {});
+          return fieldsOrder.map((field) => ({
+            datos: fieldsMap[field],
+            descripcion: dataMap[field],
+          }));
+        });
+        setPropiedades(formattedData);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return (
+    <Container maxWidth="lg" style={{ marginTop: '2em' }}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={6} md={4}>
+          <TextField
+            label="Identificación"
+            variant="outlined"
+            value={identificacion}
+            onChange={(e) => setIdentificacion(e.target.value)}
+            fullWidth
+          />
+        </Grid>
+        <Grid item>
+          <Button variant="contained" color="primary" onClick={handleSearch}>
+            Buscar
+          </Button>
+        </Grid>
+      </Grid>
+      <div style={{ marginTop: '2em' }}>
+        {propiedades.map((propiedad, index) => (
+          <Accordion key={index}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography>Propiedad {index + 1}</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography>
+                {propiedad.map((field) =>
+                  <div key={field.datos}>{field.datos}: {field.descripcion}</div>
+                )}
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+        ))}
+      </div>
+    </Container>
+  );
+};
+
+export default PropiedadForm;
+
+ClientesForm.js:
+import React, { useState, useEffect } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
+import { Button, Container } from '@mui/material';
+import axios from 'axios';
+import { GridToolbar } from '@mui/x-data-grid';
+
+const ClientesForm = () => {
+
+    const [rows, setRows] = useState([]);
+    const [page, setPage] = useState(1);
+
+    const columns = [
+        { field: 'Cuenta ACrm', headerName: 'Cuenta ACrm', width: 150 },
+        { field: 'Cuenta EPAM', headerName: 'Cuenta EPAM', width: 150 },
+        { field: 'Cedula', headerName: 'Cedula', width: 120 },
+        { field: 'Nombre', headerName: 'Nombre', width: 300 },
+        { field: 'Edad', headerName: 'Edad', width: 80 },
+        { field: 'FechaNacimiento', headerName: 'Fecha Nacimiento', width: 150 },
+        { field: 'Defuncion', headerName: 'Defuncion', width: 100 },
+        { field: 'Total Deuda', headerName: 'Total Deuda', width: 100 },
+        { field: 'Deuda Captital', headerName: 'Deuda Capital', width: 120 },
+        { field: 'Deuda Intereses', headerName: 'Deuda Intereses', width: 120 },
+        { field: 'Deuda 2018', headerName: 'Deuda 2018', width: 100 },
+        { field: 'Deuda 2019', headerName: 'Deuda 2019', width: 100 },
+        { field: 'Deuda 2020', headerName: 'Deuda 2020', width: 100 },
+        { field: 'Deuda 2021', headerName: 'Deuda 2021', width: 100 },
+        { field: 'Deuda 2022', headerName: 'Deuda 2022', width: 100 },
+        { field: 'Clase Persona', headerName: 'Clase Persona', width: 120 },
+        { field: 'Tipo Identificación', headerName: 'Tipo Identificación', width: 150 },       
+        { field: 'Tarifa', headerName: 'Tarifa', width: 120 },
+        { field: 'Estado Servicio', headerName: 'Estado Servicio', width: 150 },
+        { field: 'Procesado', headerName: 'Procesado', width: 100 },
+    ];
+
+
+    const fetchData = async (page = 1, size = 50) => {
+        try {
+            const response = await axios.get(`http://192.168.10.89:5000/clientes?page=${page}&size=${size}`);
+            const data = response.data.map((item, index) => ({ id: index + 1, ...item }));
+            setRows(data);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const handleNextPage = () => {
+        setPage(prevPage => prevPage + 1);
+        fetchData(page + 1);
+    }
+
+    const handlePrevPage = () => {
+        setPage(prevPage => prevPage - 1);
+        fetchData(page - 1);
+    }
+
+    return (
+        <Container>
+            <Button onClick={handlePrevPage} disabled={page === 1}>Página anterior</Button>
+            <Button onClick={handleNextPage}>Página siguiente</Button>
+
+            <DataGrid
+          rows={rows}
+          columns={columns}
+          pageSize={50}
+          components={{
+            Toolbar: GridToolbar, 
+          }}
+          density="compact"
+        />
+
+        </Container>
+    );
+}
+
+export default ClientesForm;
+
+VehiculosForm.js:
+
+import React, { useState } from 'react';
+import axios from 'axios';
+import { Button, TextField, Container, Grid, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
+
+const VehiculosForm = () => {
+    const [identificacion, setIdentificacion] = useState('');
+    const [tipoIdentificacion, setTipoIdentificacion] = useState('');
+    const [rows, setRows] = useState([]);
+    const [validInput, setValidInput] = useState(false);
+
+    const isValidCedula = (cedula) => {
+        const coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2];
+        let total = 0;
+
+        if (cedula.length !== 10) {
+            return false;
+        }
+
+        for (let i = 0; i < coeficientes.length; i++) {
+            let valor = coeficientes[i] * parseInt(cedula[i]);
+            if (valor >= 10) {
+                valor = valor - 9;
+            }
+            total += valor;
+        }
+
+        total = total % 10 === 0 ? 0 : 10 - (total % 10);
+
+        return total === parseInt(cedula[9]);
+    };
+
+    const isValidRUC = (ruc) => {
+        return ruc.length === 13 && isValidCedula(ruc.slice(0, 10));
+    };
+
+    const isValidPasaporte = (pasaporte) => {
+        return pasaporte.length >= 8 && pasaporte.length <= 10;
+    };
+
+    const handleIdentificacionChange = (e) => {
+        const val = e.target.value;
+        setIdentificacion(val);
+
+        switch (tipoIdentificacion) {
+            case 'CED':
+                setValidInput(isValidCedula(val));
+                break;
+            case 'RUC':
+                setValidInput(isValidRUC(val));
+                break;
+            case 'PAS':
+                setValidInput(isValidPasaporte(val));
+                break;
+            default:
+                setValidInput(false);
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && validInput) {
+            handleSearch();
+        }
+    };
+
+    const columns = [
+        { field: 'vehiculo', headerName: 'Vehículo', width: 200 },
+        { field: 'chasis', headerName: 'Chasis', width: 200 },
+        { field: 'motor', headerName: 'Motor', width: 200 },
+        { field: 'placa', headerName: 'Placa', width: 200 },
+    ];
+
+    const handleSearch = async () => {
+        try {
+            const response = await axios.get('http://192.168.10.89:3001/consultarAntVehiculos', {
+                params: { tipoIdentificacion, identificacion },
+            });
+
+            if (response.data.length === 0) {
+                setRows([]);
+            } else {
+                let formattedData = [];
+
+                response.data.forEach((item, i) => {
+                    const vehiculoKey = Object.keys(item)[0];
+                    const vehiculoData = item[vehiculoKey];
+                    formattedData.push({
+                        id: i,
+                        vehiculo: vehiculoKey,
+                        chasis: vehiculoData.chasis,
+                        motor: vehiculoData.motor,
+                        placa: vehiculoData.placa,
+                    });
+                });
+
+                setRows(formattedData);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    return (
+        <Container maxWidth="lg" style={{ height: 900, marginTop: '2em' }}>
+            <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} sm={4} md={3}>
+                    <FormControl variant="outlined" fullWidth>
+                        <InputLabel id="tipoIdentificacion-label">Tipo de Identificación</InputLabel>
+                        <Select
+                            labelId="tipoIdentificacion-label"
+                            id="tipoIdentificacion"
+                            value={tipoIdentificacion}
+                            onChange={(e) => setTipoIdentificacion(e.target.value)}
+                            label="Tipo de Identificación"
+                        >
+                            <MenuItem value={'CED'}>Cédula</MenuItem>
+                            <MenuItem value={'RUC'}>RUC</MenuItem>
+                            <MenuItem value={'PAS'}>Pasaporte</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4} md={3}>
+                    <TextField
+                        label="Identificación"
+                        variant="outlined"
+                        value={identificacion}
+                        onChange={handleIdentificacionChange}
+                        onKeyDown={handleKeyDown}
+                        fullWidth
+                    />
+                </Grid>
+                <Grid item xs={12} sm={4} md={3}>
+                    <Button variant="contained" color="primary" onClick={handleSearch} disabled={!validInput}>
+                        Buscar
+                    </Button>
+                </Grid>
+            </Grid>
+            <div style={{ height: 600, width: '100%', marginTop: '2em' }}>
+                <DataGrid
+                    rows={rows}
+                    columns={columns}
+                    pageSize={6}
+                    components={{
+                        Toolbar: GridToolbar,
+                    }}
+                    density="compact"
+                />
+            </div>
+        </Container>
+    );
+};
+
+firebase:
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDiwwodBo-JLvlVmzP_m4N6fTu1zLjYhRQ",
+  authDomain: "dinardap-c027c.firebaseapp.com",
+  projectId: "dinardap-c027c",
+  storageBucket: "dinardap-c027c.appspot.com",
+  messagingSenderId: "694608177224",
+  appId: "1:694608177224:web:237a5031433c1eb561107d",
+  measurementId: "G-51ML6VPQLF"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+export default VehiculosForm;
+
+
+Version de react y dom:
+data@0.1.0 /var/www/data
++-- @emotion/react@11.11.1
+| +-- @emotion/use-insertion-effect-with-fallbacks@1.0.1
+| | `-- react@18.2.0 deduped
+| `-- react@18.2.0 deduped
++-- @emotion/styled@11.11.0
+| `-- react@18.2.0 deduped
++-- @mui/material@5.13.6
+| +-- @mui/base@5.0.0-beta.5
+| | `-- react@18.2.0 deduped
+| +-- @mui/system@5.13.6
+| | +-- @mui/private-theming@5.13.1
+| | | `-- react@18.2.0 deduped
+| | +-- @mui/styled-engine@5.13.2
+| | | `-- react@18.2.0 deduped
+| | `-- react@18.2.0 deduped
+| +-- @mui/utils@5.13.6
+| | `-- react@18.2.0 deduped
+| +-- react-transition-group@4.4.5
+| | `-- react@18.2.0 deduped
+| `-- react@18.2.0 deduped
++-- @mui/x-data-grid@6.9.0
+| `-- react@18.2.0 deduped
++-- @testing-library/react@13.4.0
+| `-- react@18.2.0 deduped
++-- ra-data-json-server@4.11.4
+| `-- ra-core@4.11.4
+|   +-- react-query@3.39.3
+|   | `-- react@18.2.0 deduped
+|   `-- react@18.2.0 deduped
++-- react-admin@4.11.4
+| +-- @mui/icons-material@5.11.16
+| | `-- react@18.2.0 deduped
+| +-- ra-ui-materialui@4.11.4
+| | +-- react-dropzone@12.1.0
+| | | `-- react@18.2.0 deduped
+| | +-- react-error-boundary@3.1.4
+| | | `-- react@18.2.0 deduped
+| | `-- react@18.2.0 deduped
+| +-- react-hook-form@7.45.0
+| | `-- react@18.2.0 deduped
+| +-- react-router-dom@6.14.0
+| | `-- react@18.2.0 deduped
+| +-- react-router@6.14.0
+| | `-- react@18.2.0 deduped
+| `-- react@18.2.0 deduped
++-- react-dom@18.2.0
+| `-- react@18.2.0 deduped
++-- react-scripts@5.0.1
+| `-- react@18.2.0 deduped
+`-- react@18.2.0
+data@0.1.0 /var/www/data
++-- @mui/material@5.13.6
+| +-- @mui/base@5.0.0-beta.5
+| | `-- react-dom@18.2.0 deduped
+| +-- react-dom@18.2.0 deduped
+| `-- react-transition-group@4.4.5
+|   `-- react-dom@18.2.0 deduped
++-- @mui/x-data-grid@6.9.0
+| `-- react-dom@18.2.0 deduped
++-- @testing-library/react@13.4.0
+| `-- react-dom@18.2.0 deduped
++-- ra-data-json-server@4.11.4
+| `-- ra-core@4.11.4
+|   `-- react-dom@18.2.0 deduped
++-- react-admin@4.11.4
+| +-- ra-ui-materialui@4.11.4
+| | `-- react-dom@18.2.0 deduped
+| +-- react-dom@18.2.0 deduped
+| `-- react-router-dom@6.14.0
+|   `-- react-dom@18.2.0 deduped
+`-- react-dom@18.2.0
