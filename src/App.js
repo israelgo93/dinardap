@@ -13,9 +13,9 @@ import ClientesForm from './components/ClientesForm';
 import VehiculosForm from './components/VehiculosForm';
 
 // Importar CustomAppBar y ProfilePage aquí
-import CustomAppBar from './CustomAppBar';
+import CustomAppBar from './components/CustomAppBar';
 import ProfilePage from './components/ProfilePage';
-
+ 
 function App() {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);

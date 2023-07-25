@@ -3,7 +3,7 @@ import { AppBar, UserMenu, useTranslate } from 'react-admin';
 import { MenuItemLink } from 'react-admin';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import PersonIcon from '@mui/icons-material/Person';
-import { auth } from './firebase';
+import { auth } from '../firebase';
 
 const CustomUserMenu = (props) => {
     const translate = useTranslate();
