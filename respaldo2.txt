@@ -5,6 +5,8 @@ import { Admin, Resource } from 'react-admin';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from './firebase';
+import { FirebaseDataProvider } from 'react-admin-firebase';
+
 import Login from './components/Login';
 import Register from './components/Register';
 import IdentificacionForm from './components/IdentificacionForm';
@@ -14,11 +16,6 @@ import PropiedadForm from './components/PropiedadForm';
 import ClientesForm from './components/ClientesForm';
 import VehiculosForm from './components/VehiculosForm';
 
-
-// Importar CustomAppBar y ProfilePage aquí
-import CustomAppBar from './components/CustomAppBar';
-import ProfilePage from './components/ProfilePage';
- 
 function App() {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
@@ -43,14 +40,16 @@ function App() {
     return <h2>Cargando...</h2>;
   }
 
+  const dataProvider = FirebaseDataProvider({}, auth);
+
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/profile" element={<ProfilePage />} /> {/* Agregar ruta para la página de perfil aquí */}
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={authenticated ? (
-          <Admin appBar={CustomAppBar}> {/* Usa CustomAppBar aquí */}
+          <Admin appBar={CustomAppBar} sidebar={CustomSidebar} dataProvider={dataProvider}>
             <Resource name="identificacionForm" options={{ label: 'Buscar por Identificación' }} list={IdentificacionForm} />
             <Resource name="vehiculosForm" options={{ label: 'Buscar Vehiculos' }} list={VehiculosForm} />
             <Resource name="placaForm" options={{ label: 'Buscar por Placa' }} list={PlacaForm} />
@@ -67,41 +66,45 @@ function App() {
 
 export default App;
 
-index.js:
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+Login.js:
+import React, { useState } from 'react';
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from '../firebase';
+import { useNavigate } from 'react-router-dom';  // Importar useNavigate
 
-const root = createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+export default function Login() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const navigate = useNavigate();  // Usar useNavigate
 
-reportWebVitals();
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            console.log("Usuario conectado: ", userCredential.user);
+            navigate('/');  // Navegar a la página principal después del inicio de sesión exitoso
+        } catch (error) {
+            console.error("Error al iniciar sesión: ", error.message);
+        }
+    };
 
-firebase.js:
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyDiwwodBo-JLvlVmzP_m4N6fTu1zLjYhRQ",
-    authDomain: "dinardap-c027c.firebaseapp.com",
-    projectId: "dinardap-c027c",
-    storageBucket: "dinardap-c027c.appspot.com",
-    messagingSenderId: "694608177224",
-    appId: "1:694608177224:web:237a5031433c1eb561107d",
-    measurementId: "G-51ML6VPQLF"
-};
-
-const app = initializeApp(firebaseConfig);
-
-const auth = getAuth(app);
-
-export { auth };
+    return (
+        <div>
+            <h1>Iniciar sesión</h1>
+            <form onSubmit={handleSubmit}>
+                <label>
+                    Correo electrónico:
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </label>
+                <label>
+                    Contraseña:
+                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+                </label>
+                <button type="submit">Iniciar sesión</button>
+            </form>
+        </div>
+    );
+}
 
 Register.js:
 import React, { useState } from 'react';
@@ -143,173 +146,165 @@ export default function Register() {
     );
 }
 
-Login.js:
+firebase.js:
+import { initializeApp } from "firebase/app";
+import { getAuth, signOut } from "firebase/auth"; // Añadido signOut aquí
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDiwwodBo-JLvlVmzP_m4N6fTu1zLjYhRQ",
+    authDomain: "dinardap-c027c.firebaseapp.com",
+    projectId: "dinardap-c027c",
+    storageBucket: "dinardap-c027c.appspot.com",
+    messagingSenderId: "694608177224",
+    appId: "1:694608177224:web:237a5031433c1eb561107d",
+    measurementId: "G-51ML6VPQLF"
+};
+
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+
+export { auth, signOut };
+
+IdentificacionForm.js:
 
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from '../firebase';
-import { useNavigate } from 'react-router-dom';  // Importar useNavigate
+import axios from 'axios';
+import { Button, TextField, Container, Grid } from '@mui/material';
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 
-export default function Login() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const navigate = useNavigate();  // Usar useNavigate
+const IdentificacionForm = () => {
+  const [identificacion, setIdentificacion] = useState('');
+  const [rows, setRows] = useState([]);
+  const [validInput, setValidInput] = useState(false);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            console.log("Usuario conectado: ", userCredential.user);
-            navigate('/');  // Navegar a la página principal después del inicio de sesión exitoso
-        } catch (error) {
-            console.error("Error al iniciar sesión: ", error.message);
+  const columns = [
+    { field: 'datos', headerName: 'Datos', width: 300 },
+    { field: 'descripcion', headerName: 'Descripción', width: 300 },
+  ];
+
+  const fieldsOrder = [
+    'cedula', 'nombre', 'profesion', 'fechaExpedicion', 'fechaExpiracion',
+    'condicionCiudadano', 'fechaNacimiento', 'lugarNacimiento', 'conyuge',
+    'estadoCivil', 'fechaInscripcionDefuncion', 'actaDefuncion', 'fechaDefuncion'
+  ];
+
+  const fieldsMap = {
+    'cedula': 'Cédula',
+    'nombre': 'Nombres Completos',
+    'profesion': 'Profesión',
+    'fechaExpedicion': 'Fecha Expedición de Cédula',
+    'fechaExpiracion': 'Fecha Expiración de Cédula',
+    'condicionCiudadano': 'Condición Ciudadano',
+    'fechaNacimiento': 'Fecha Nacimiento',
+    'lugarNacimiento': 'Lugar Nacimiento',
+    'conyuge': 'Cónyugue',
+    'estadoCivil': 'Estado Civil',
+    'fechaInscripcionDefuncion': 'Fecha Inscripción Defunción',
+    'actaDefuncion': 'Acta de Defunción',
+    'fechaDefuncion': 'Fecha Defunción',
+  };
+
+  const isValidCedula = (cedula) => {
+    const coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2];
+    let total = 0;
+
+    if (cedula.length !== 10) {
+      return false;
+    }
+
+    for (let i = 0; i < coeficientes.length; i++) {
+      let valor = coeficientes[i] * parseInt(cedula[i]);
+      if (valor >= 10) {
+        valor = valor - 9;
+      }
+      total += valor;
+    }
+
+    total = total % 10 === 0 ? 0 : 10 - (total % 10);
+
+    return total === parseInt(cedula[9]);
+  };
+
+  const handleChange = (e) => {
+    setIdentificacion(e.target.value);
+    setValidInput(isValidCedula(e.target.value));
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && validInput) {
+      handleSearch();
+    }
+  };
+
+  const handleSearch = async () => {
+    try {
+      if (validInput) {
+        const response = await axios.get('http://192.168.10.89:3001/consultar', {
+          params: { identificacion },
+        });
+
+        if (Object.keys(response.data).length === 0) {
+          setRows([]);
+        } else {
+          const data = response.data.paquete.entidades.entidad[0].filas.fila[0].columnas.columna;
+          const dataMap = data.reduce((acc, item) => ({
+            ...acc,
+            [item.campo]: item.valor,
+          }), {});
+
+          const formattedData = fieldsOrder.map((field, i) => ({
+            id: i,
+            datos: fieldsMap[field],
+            descripcion: dataMap[field],
+          }));
+
+          setRows(formattedData);
         }
-    };
+      } else {
+        console.error('La identificación no es válida');
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
-    return (
-        <div>
-            <h1>Iniciar sesión</h1>
-            <form onSubmit={handleSubmit}>
-                <label>
-                    Correo electrónico:
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                </label>
-                <label>
-                    Contraseña:
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
-                </label>
-                <button type="submit">Iniciar sesión</button>
-            </form>
-        </div>
-    );
-}
-
-ProfilePage.js:
-import * as React from 'react';
-import { useState } from 'react';
-import { useTranslate, useNotify, useDataProvider } from 'react-admin';
-import { useForm } from 'react-final-form';
-import {
-    Avatar,
-    Card,
-    CardContent,
-    CardHeader,
-    TextField,
-    Button,
-    Box,
-} from '@mui/material';
-
-const ProfilePage = () => {
-    const [record, setRecord] = useState();
-    const form = useForm();
-    const translate = useTranslate();
-    const notify = useNotify();
-    const dataProvider = useDataProvider();
-
-    const handleSave = values => {
-        dataProvider
-            .update('profile', { id: record.id, data: values })
-            .then(({ data }) => {
-                setRecord(data);
-                notify('ra.notification.updated', 'info', { smart_count: 1 });
-            })
-            .catch(error => {
-                notify(
-                    typeof error === 'string'
-                        ? error
-                        : error.message || 'ra.notification.http_error',
-                    'warning'
-                );
-            });
-    };
-
-    return (
-        <Box
-            sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-            }}
-        >
-            <Card sx={{ maxWidth: 300 }}>
-                <CardHeader title={translate('ra.my_profile')} />
-                <CardContent>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <Avatar sx={{ width: 60, height: 60 }}>
-                            {record &&
-                                (record.avatar ? (
-                                    <img src={record.avatar} alt="" />
-                                ) : (
-                                    record.name[0]
-                                ))}
-                        </Avatar>
-                    </Box>
-                    <div>
-                        <TextField
-                            label={translate('ra.auth.name')}
-                            defaultValue={record && record.name}
-                            onBlur={form.submit}
-                            onChange={event =>
-                                form.change('name', event.target.value)
-                            }
-                        />
-                    </div>
-                    <div>
-                        <TextField
-                            label={translate('ra.auth.email')}
-                            defaultValue={record && record.email}
-                            onBlur={form.submit}
-                            onChange={event =>
-                                form.change('email', event.target.value)
-                            }
-                        />
-                    </div>
-                    <Button onClick={() => handleSave(form.getState().values)}>
-                        Save
-                    </Button>
-                </CardContent>
-            </Card>
-        </Box>
-    );
+  return (
+    <Container maxWidth="lg" style={{ height: 900, marginTop: '2em' }}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={6} md={4}>
+          <TextField
+            label="Identificación"
+            variant="outlined"
+            value={identificacion}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            fullWidth
+          />
+        </Grid>
+        <Grid item>
+          <Button variant="contained" color="primary" onClick={handleSearch} disabled={!validInput}>
+            Buscar
+          </Button>
+        </Grid>
+      </Grid>
+      <div style={{ height: 600, width: '100%', marginTop: '2em' }}>
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          pageSize={6}
+          components={{
+            Toolbar: GridToolbar,
+          }}
+          density="compact"
+        />
+      </div>
+    </Container>
+  );
 };
 
-export default ProfilePage;
+export default IdentificacionForm;
 
-CustomAppBar.js:
-import * as React from 'react';
-import { AppBar, UserMenu, useTranslate } from 'react-admin';
-import { MenuItemLink } from 'react-admin';
-import ExitToAppIcon from '@mui/icons-material/ExitToApp';
-import PersonIcon from '@mui/icons-material/Person';
-import { auth } from '../firebase';
-
-const CustomUserMenu = (props) => {
-    const translate = useTranslate();
-    return (
-        <UserMenu {...props}>
-            <MenuItemLink
-                to="/profile"
-                primaryText={translate('ra.my_profile')}
-                leftIcon={<PersonIcon />}
-            />
-            <MenuItemLink
-                onClick={() => auth.signOut()}
-                primaryText={translate('ra.auth.logout')}
-                leftIcon={<ExitToAppIcon />}
-            />
-        </UserMenu>
-    );
-};
-
-const CustomAppBar = (props) => <AppBar {...props} userMenu={<CustomUserMenu />} />;
-
-export default CustomAppBar;
 
 package.json:
 {
