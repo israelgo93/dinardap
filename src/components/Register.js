@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';  
-import { Button, TextField, Container, Typography, Box } from '@mui/material';
+import { Button, TextField, Container, Typography, Box, Grid } from '@mui/material';
 import validator from 'validator';
 import styled from 'styled-components';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const MainWrapper = styled.div`
   min-height: 100vh;
@@ -115,6 +116,16 @@ export default function Register() {
                             Registrarse
                         </Button>
                     </form>
+                    <Grid container justifyContent="center" style={{ marginTop: '10px' }}>
+                        <Button 
+                            startIcon={<ArrowBackIcon />}
+                            onClick={() => navigate('/login')}
+                            variant="outlined"
+                            style={{ color: '#00008B', borderColor: '#00008B' }}
+                        >
+                            Iniciar Sesión
+                        </Button>
+                    </Grid>
                 </FormWrapper>
             </Container>
         </MainWrapper>

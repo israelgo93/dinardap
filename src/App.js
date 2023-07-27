@@ -54,7 +54,7 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setAuthenticated(true);
-      } else { 
+      } else {
         setAuthenticated(false);
       }
       setLoading(false);
@@ -75,12 +75,12 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router basename="/datos">
       <ThemeProvider theme={theme}>
         <Routes>
           <Route path="/login" element={authenticated ? <Navigate to="/" /> : <Login />} />
           <Route path="/register" element={authenticated ? <Navigate to="/" /> : <Register />} />
-          <Route path="*" element={authenticated ? <AdminComponent /> : <Navigate to="/login" />} />
+          <Route path="/*" element={authenticated ? <AdminComponent /> : <Navigate to="/login" />} />
         </Routes>
       </ThemeProvider>
     </Router>
@@ -88,4 +88,3 @@ function App() {
 }
 
 export default App;
-
