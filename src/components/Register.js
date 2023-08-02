@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from '../firebase';
-import { useNavigate } from 'react-router-dom';  
-import { Button, TextField, Container, Typography, Box, Grid } from '@mui/material';
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth, sendEmailVerification } from '../firebase';
+import { useNavigate } from 'react-router-dom';
+import { Button, TextField, Container, Typography, Box, Grid, Snackbar } from '@mui/material';
 import validator from 'validator';
 import styled from 'styled-components';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import MuiAlert from '@mui/material/Alert';
 
 const MainWrapper = styled.div`
   min-height: 100vh;
@@ -25,11 +26,14 @@ const FormWrapper = styled(Box)`
 `;
 
 export default function Register() {
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [passwordConfirm, setPasswordConfirm] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
-    const navigate = useNavigate();  
+    const [openSnackbar, setOpenSnackbar] = useState(false);
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -55,11 +59,29 @@ export default function Register() {
 
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            console.log("Usuario registrado: ", userCredential.user);
-            navigate('/login');  
+
+            // Actualizar el perfil del usuario con el nombre y apellido
+            await updateProfile(userCredential.user, {
+                displayName: `${firstName} ${lastName}`,
+            });
+
+            // Enviar correo de verificación
+            await sendEmailVerification(userCredential.user)
+                .then(() => {
+                    setOpenSnackbar(true);
+                    setTimeout(() => navigate('/login'), 10000); // Redirigir después de 10 segundos
+                });
+
         } catch (error) {
             console.error("Error al registrar usuario: ", error.message);
         }
+    };
+
+    const handleCloseSnackbar = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setOpenSnackbar(false);
     };
 
     return (
@@ -75,10 +97,28 @@ export default function Register() {
                             margin="normal"
                             required
                             fullWidth
+                            label="Nombres"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            autoFocus
+                        />
+                        <TextField
+                            variant="outlined"
+                            margin="normal"
+                            required
+                            fullWidth
+                            label="Apellidos"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                        />
+                        <TextField
+                            variant="outlined"
+                            margin="normal"
+                            required
+                            fullWidth
                             label="Correo electrónico"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            autoFocus
                         />
                         <TextField
                             variant="outlined"
@@ -107,7 +147,7 @@ export default function Register() {
                                 {errorMessage}
                             </Typography>
                         )}
-                        <Button 
+                        <Button
                             type="submit"
                             fullWidth
                             variant="contained"
@@ -117,7 +157,7 @@ export default function Register() {
                         </Button>
                     </form>
                     <Grid container justifyContent="center" style={{ marginTop: '10px' }}>
-                        <Button 
+                        <Button
                             startIcon={<ArrowBackIcon />}
                             onClick={() => navigate('/login')}
                             variant="outlined"
@@ -126,6 +166,13 @@ export default function Register() {
                             Iniciar Sesión
                         </Button>
                     </Grid>
+                    <Snackbar open={openSnackbar} autoHideDuration={10000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+                        <MuiAlert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+                        Estimado {firstName} {lastName}, <br />
+                        Verifica la dirección de correo electrónico {email} <br />
+                        registrado en el Portal Dinardap EPAM.
+                        </MuiAlert>
+                    </Snackbar>
                 </FormWrapper>
             </Container>
         </MainWrapper>

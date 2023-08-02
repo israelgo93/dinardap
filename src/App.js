@@ -5,28 +5,28 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from './firebase';
 import { FirebaseDataProvider } from 'react-admin-firebase';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import CircularProgress from '@mui/material/CircularProgress'; // Importación del componente CircularProgress
+import CircularProgress from '@mui/material/CircularProgress';
 
 import Login from './components/Login';
 import Register from './components/Register';
+import CustomMenu from './components/CustomMenu';
 import IdentificacionForm from './components/IdentificacionForm';
 import PlacaForm from './components/PlacaForm';
 import ChasisForm from './components/ChasisForm';
 import PropiedadForm from './components/PropiedadForm';
 import ClientesForm from './components/ClientesForm';
 import VehiculosForm from './components/VehiculosForm';
-import CustomMenu from './components/CustomMenu';
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#7986cb', // Nuevo color primario para la AppBar
+      main: '#7986cb',
     },
     secondary: {
-      main: '#4db6ac', // Nuevo color secundario
+      main: '#4db6ac',
     },
     background: {
-      default: '#fafafa', // Nuevo color de fondo
+      default: '#fafafa',
     },
   },
 });
@@ -44,7 +44,7 @@ const AdminComponent = () => {
       <Resource name="clientes" options={{ label: 'Consulta Clientes' }} list={ClientesForm} />
     </Admin>
   );
-}
+};
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -52,7 +52,7 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
+      if (user && user.emailVerified) {
         setAuthenticated(true);
       } else {
         setAuthenticated(false);
@@ -69,7 +69,7 @@ function App() {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress /> {/* Spinner de carga */}
+        <CircularProgress />{/* Spinner de carga */}
       </div>
     );
   }
